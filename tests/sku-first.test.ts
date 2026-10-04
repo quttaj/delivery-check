@@ -17,7 +17,7 @@ function report(rows:any[],mockedAiResponse:{observations:MockOccurrence[]}){
  const extraction=deduplicated.evidence;
  const observations=extraction.observations.map((item:any)=>{
   const matched=matchSku(rows,item.observedSku),row=matched.row;
-  return {unitId:`P1-${item.occurrenceRef}`,photoIndex:0,rowId:row?.id||null,box:evidenceBoxForObservation(item),reason:'Complete printed SKU occurrence.',request:'',attributes:[{field:'sku',expected:row?.sku||'',observed:item.observedSku,status:matched.status}]};
+  return {unitId:`P1-${item.occurrenceRef}`,photoIndex:0,rowId:row?.id||null,box:evidenceBoxForObservation(item),reason:'Complete printed SKU occurrence.',attributes:[{field:'sku',expected:row?.sku||'',observed:item.observedSku,status:matched.status}]};
  });
  return {extraction,removed:deduplicated.removed,result:reconcile(rows,observations)};
 }

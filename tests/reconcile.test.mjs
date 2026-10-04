@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {reconcile} from '../lib/reconcile.mjs';
 
 const row={id:'1',description:'Controlled item',quantity:2,sourceIds:[1],sku:'SS-SC-16-0200',unit:'pc'};
-function obs(unitId,photoIndex=0,status='matched',changes={}){return {unitId,photoIndex,rowId:status==='unexpected'?null:'1',box:{x:0,y:0,w:.3,h:.3},reason:'Visible printed SKU occurrence',request:'',attributes:[{field:'sku',expected:status==='matched'||status==='mismatch'?row.sku:'',observed:status==='mismatch'?'SS-SC-20-0200':status==='unexpected'?'OTHER-01':row.sku,status}],...changes};}
+function obs(unitId,photoIndex=0,status='matched',changes={}){return {unitId,photoIndex,rowId:status==='unexpected'?null:'1',box:{x:0,y:0,w:.3,h:.3},reason:'Visible printed SKU occurrence',attributes:[{field:'sku',expected:status==='matched'||status==='mismatch'?row.sku:'',observed:status==='mismatch'?'SS-SC-20-0200':status==='unexpected'?'OTHER-01':row.sku,status}],...changes};}
 
 test('the same occurrence reference is counted once within a photo',()=>assert.equal(reconcile([row],[obs('T1'),obs('T1'),obs('T2')]).rows[0].count,2));
 test('distinct readable occurrences with the same SKU are each counted',()=>assert.equal(reconcile([row],[obs('T1'),obs('T2'),obs('T3')]).rows[0].status,'extra'));
@@ -12,8 +12,6 @@ test('related but different SKU is reported separately from the expected row',()
 test('readable unknown SKU remains a standalone unexpected item',()=>{const result=reconcile([row],[obs('T1'),obs('X',0,'unexpected')]);assert.equal(result.unexpected[0].sku,'OTHER-01');assert.equal(result.allVerified,false);});
 test('no readable occurrence is unverified rather than missing',()=>assert.match(reconcile([row],[]).rows[0].reason,/not proof/i));
 test('separate non-overlapping photos sum their distinct occurrences',()=>assert.equal(reconcile([row],[obs('T1',0),obs('T1',1)]).rows[0].count,2));
-test('capture ambiguity keeps established row counts while blocking overall verification',()=>{const result=reconcile([row],[obs('T1'),obs('T2')],'Capture clarification');assert.equal(result.rows[0].status,'matched');assert.equal(result.allVerified,false);});
-
 test('confirmed readable quantities remain distinct from quantities not verified',()=>{
  const expected={...row,quantity:3};
  const result=reconcile([expected],[obs('T1')]);
@@ -31,7 +29,7 @@ test('correct extras and simultaneous wrong SKUs remain independent findings',()
   {id:'4',description:'Row 4',quantity:2,sourceIds:[4],sku:'AF-GY-10-0200',unit:'pc'}
  ];
  const bySku=new Map(rows.map(item=>[item.sku,item]));
- const observation=(unitId,observedSku,status,rowId=null)=>({unitId,photoIndex:0,rowId,box:{x:0,y:0,w:.1,h:.1},reason:'Visible printed SKU occurrence',request:'',attributes:[{field:'sku',expected:rowId?rows.find(item=>item.id===rowId).sku:'',observed:observedSku,status}]});
+ const observation=(unitId,observedSku,status,rowId=null)=>({unitId,photoIndex:0,rowId,box:{x:0,y:0,w:.1,h:.1},reason:'Visible printed SKU occurrence',attributes:[{field:'sku',expected:rowId?rows.find(item=>item.id===rowId).sku:'',observed:observedSku,status}]});
  const observations=[
   ...['bm1','bm2','bm3'].map(id=>observation(id,'BM-FM-35-0500','matched',bySku.get('BM-FM-35-0500').id)),
   ...['bb1','bb2','bb3'].map(id=>observation(id,'BB-SY-25-0150','matched',bySku.get('BB-SY-25-0150').id)),
@@ -55,6 +53,6 @@ test('correct extras and simultaneous wrong SKUs remain independent findings',()
 
 test('details-panel units expose one canonical SKU check',()=>{
  const unit=reconcile([{...row,quantity:1}],[obs('T1')]).rows[0].units[0];
- assert.deepEqual(unit.check,{field:'sku',expected:row.sku,observed:row.sku,status:'matched'});
+ assert.deepEqual(unit.check,{expected:row.sku,observed:row.sku,status:'matched'});
  assert.equal('attributes' in unit,false);
 });

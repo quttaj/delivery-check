@@ -7,7 +7,7 @@ import {reconcile} from '../lib/reconcile.mjs';
 const row={id:'1',description:'Controlled item',quantity:1,sourceIds:[7],sku:'BM-FM-35-0500',unit:'pc'};
 const doc={image:'data:image/png;base64,doc',segments:[{id:7,x:.1,y:.2,w:.3,h:.04}]};
 const photos=[{data:'data:image/jpeg;base64,photo'}];
-const observation=(id:string,status='matched',sku=row.sku,rowId:string|null='1')=>({unitId:id,photoIndex:0,rowId,box:{x:.2,y:.3,w:.2,h:.2},reason:'Visible printed SKU',request:status==='unreadable'?'Show the complete label.':'',attributes:[{field:'sku',expected:rowId?row.sku:'',observed:status==='unreadable'?'':sku,status}]});
+const observation=(id:string,status='matched',sku=row.sku,rowId:string|null='1')=>({unitId:id,photoIndex:0,rowId,box:{x:.2,y:.3,w:.2,h:.2},reason:'Visible printed SKU',attributes:[{field:'sku',expected:rowId?row.sku:'',observed:status==='unreadable'?'':sku,status}]});
 const render=(selected:any)=>renderToStaticMarkup(<EvidenceDetailsBody selected={selected} doc={doc} photos={photos} zoom={false} onToggleZoom={()=>{}}/>);
 
 test('renders confirmed and extra row details from unit.check with row and image evidence',()=>{

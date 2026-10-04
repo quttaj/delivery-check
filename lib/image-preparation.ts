@@ -1,4 +1,7 @@
-export const MAX_IMAGE_DATA_URL_LENGTH=5_800_000;
+// Leave room below Vercel's 4.5 MB function payload limit for JSON, packing-list
+// segments, the file name and other request fields.
+export const MAX_ANALYZE_REQUEST_BYTES=4_250_000;
+export const MAX_IMAGE_DATA_URL_LENGTH=4_000_000;
 export const MAX_RESIZED_DIMENSION=4_096;
 
 export function estimatedDataUrlLength(byteLength:number,mimeType='image/jpeg'){

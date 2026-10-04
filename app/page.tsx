@@ -11,6 +11,7 @@ import {parsePackingList} from '@/lib/packing-list.mjs';
 import {buildReportHtml} from '@/lib/report.mjs';
 import {captureModeSettings,type CaptureMode} from '@/lib/capture-mode';
 import {canPreserveOriginalImage,fittedImageDimensions,MAX_IMAGE_DATA_URL_LENGTH,MAX_RESIZED_DIMENSION} from '@/lib/image-preparation';
+import {assertPhotoPayloadFits,combinePhotoAnalysis,createPhotoAnalysisPayload,measuredFailureCost,parsePhotoAnalysisResponse,PhotoAnalysisError,type PhotoAnalysisResult} from '@/lib/photo-analysis';
 type Segment={id:number,text:string,x:number,y:number,w:number,h:number};
 type ParsedRow={id:string,description:string,brand:string,manufacturer:string,productName:string,fat:string,sku:string,quantity:number,unit:string,packSize:string,sourceIds:number[]};
 type Doc={name:string,image:string,segments:Segment[],rows:ParsedRow[],ms:number};
@@ -63,7 +64,23 @@ export default function Home(){
  const prepared:Photo[]=[];for(const file of files){if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Please use JPEG, PNG or WebP. Export HEIC photos as JPEG.');if(file.size>15*1024*1024)throw Error('Each photo must be smaller than 15 MB.');prepared.push(await preparePhoto(file));}
  setPhotos(old=>replace===null?[...old,...prepared]:old.map((p,i)=>i===replace?prepared[0]:p));
  }catch(e){setError(e instanceof Error?e.message:'Could not prepare the photo.');}finally{setBusy('');}}
- async function analyze(){if(!doc||!photos.length)return;setError('');setResult(null);setBusy('Reading each photo separately and checking evidence');const start=performance.now();try{const response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({captureMode,captureConfirmed,segments:doc.segments,photos})});const data:any=await response.json();const metrics={...data.metrics,totalMs:Math.round(performance.now()-start),pdfMs:doc.ms,success:response.ok};if(!response.ok)throw Error(data.error||'The check could not be completed.');setResult({...data,metrics});}catch(e){setError(e instanceof Error?e.message:'Connection lost. No conclusion was made.');}finally{setBusy('');}}
+ async function analyze(){if(!doc||!photos.length)return;setError('');setResult(null);setBusy('Reading each photo separately and checking evidence');const start=performance.now();try{
+  const payloads=photos.map((photo,photoIndex)=>createPhotoAnalysisPayload({captureMode,captureConfirmed,segments:doc.segments,photo,photoIndex,photoCount:photos.length}));
+  payloads.forEach((payload,photoIndex)=>assertPhotoPayloadFits(payload,photoIndex));
+  const settled=await Promise.allSettled(payloads.map(async(payload,photoIndex)=>{
+   let response:Response;
+   try{response=await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:payload});}
+   catch{throw new PhotoAnalysisError(`Photo ${photoIndex+1} could not reach the server. Check the connection and try again. No delivery conclusion was made.`);}
+   let responseText='';
+   try{responseText=await response.text();}
+   catch{throw new PhotoAnalysisError(`Photo ${photoIndex+1} response could not be read. No delivery conclusion was made.`);}
+   return parsePhotoAnalysisResponse(response,responseText,photoIndex);
+  }));
+  const completed=settled.filter((item):item is PromiseFulfilledResult<PhotoAnalysisResult>=>item.status==='fulfilled').map(item=>item.value);
+  const failures=settled.filter((item):item is PromiseRejectedResult=>item.status==='rejected').map(item=>item.reason);
+  if(failures.length){const measuredCost=measuredFailureCost(completed,failures);const message=failures[0] instanceof Error?failures[0].message:'A photograph could not be analyzed. No delivery conclusion was made.';throw Error(message+(measuredCost>0?` Completed photo analysis before the failure used an estimated $${measuredCost.toFixed(5)}.`:''));}
+  setResult(combinePhotoAnalysis(doc.rows,completed,Math.round(performance.now()-start),doc.ms));
+ }catch(e){setError(e instanceof Error?e.message:'Connection lost. No conclusion was made.');}finally{setBusy('');}}
  function downloadReport(){if(!result)return;const reportWindow=window.open('','_blank');if(!reportWindow){setError('Allow pop-ups to open the printable PDF report.');return;}reportWindow.opener=null;reportWindow.document.write(buildReportHtml({documentName:doc?.name,result,verifiedAt:new Date()}));reportWindow.document.close();reportWindow.focus();setTimeout(()=>reportWindow.print(),250);}
  const counts=(status:string)=>result?.rows.filter((r:any)=>r.status===status).length||0;
  const inspectObservation=(item:any,title:string)=>{setSelected(createFindingSelection(item,result?.rows,title));setZoom(false);};
@@ -93,7 +110,6 @@ export default function Home(){
   {result.rows.filter((r:any)=>r.status!=='matched').map((r:any)=><button className="finding" key={r.id} onClick={()=>{setSelected(r);setZoom(false);}}><strong>Row {r.id} · {r.name}</strong><p>{r.reason}</p></button>)}
   {result.unexpected.map((item:any)=><button className="finding unexpected-finding" key={item.id} onClick={()=>inspectObservation(item,item.status==='mismatch'?`Different item ${item.sku}`:`Unexpected SKU ${item.sku}`)}><strong>{item.status==='mismatch'?'Different item':'Unexpected SKU'} · {item.sku} · {item.count} visible</strong><p>{item.reason}</p></button>)}
   {result.unverified.map((item:any)=><button className="finding unverified-finding" key={item.id} onClick={()=>inspectObservation(item,'Unverified observation')}><strong>Unverified observation · {item.id}</strong><p>{item.reason} Open the supporting evidence.</p></button>)}
-  {result.captureIssue&&<div className="capture-issue"><strong>Capture clarification needed</strong><p>{result.captureIssue}</p></div>}
  </div>
  <div className="metrics"><span>{(result.metrics.totalMs/1000).toFixed(1)}s to report</span><span>{result.metrics.costUSD===null?'Cost not configured':`$${result.metrics.costUSD.toFixed(5)} estimated`}</span><span>{result.metrics.attempts} photo analysis request(s)</span></div><Button variant="outline" onClick={analyze} disabled={!!busy}><RotateCcw size={16}/> Check current photos again</Button></>}
  </section></div>

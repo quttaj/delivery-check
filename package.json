@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/packing-list.test.mjs tests/reconcile.test.mjs tests/report.test.mjs tests/sku-match.test.mjs && tsx --test tests/capture-mode.test.ts tests/evidence-details.test.tsx tests/image-preparation.test.ts tests/photo-evidence.test.ts tests/schema.test.ts tests/sku-diagnostics.test.ts tests/sku-first.test.ts",
+    "test": "node --test tests/packing-list.test.mjs tests/reconcile.test.mjs tests/report.test.mjs tests/sku-match.test.mjs && tsx --test tests/analyze-route.test.ts tests/capture-mode.test.ts tests/evidence-details.test.tsx tests/image-preparation.test.ts tests/photo-analysis.test.ts tests/photo-evidence.test.ts tests/schema.test.ts tests/sku-diagnostics.test.ts tests/sku-first.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
