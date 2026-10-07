@@ -6,6 +6,17 @@ DeliveryCheck is a browser-based prototype that compares a delivery note with ph
 
 The application is designed for a small, controlled delivery-verification workflow rather than general-purpose retail product recognition.
 
+## Screenshots
+
+### Delivery setup
+![DeliveryCheck upload and verification setup](docs/screenshots/main.png)
+
+### Verified delivery
+![DeliveryCheck successful verification result](docs/screenshots/results-correct.png)
+
+### Delivery with discrepancies
+![DeliveryCheck discrepancy detection](docs/screenshots/results-mistakes.png)
+
 ## Features
 
 - Upload a one-page, text-based PDF packing list.
