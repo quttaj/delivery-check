@@ -1,6 +1,7 @@
 # DeliveryCheck
 
 **AI-powered delivery verification using packing lists and photographic SKU evidence.**
+**Live demo:** https://delivery-check-gamma.vercel.app/
 
 DeliveryCheck is a browser-based prototype that compares a delivery note with photographs of received goods. It identifies independently readable printed SKU labels, compares their quantities against the document, and generates an evidence-based verification report.
 
